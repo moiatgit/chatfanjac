@@ -26,3 +26,4 @@ Enhancements
   Some kind of log
 
 
+Consider the python3 solution of https://medium.com/swlh/lets-write-a-chat-app-in-python-f6783a9ac170
