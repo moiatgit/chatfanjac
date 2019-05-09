@@ -31,15 +31,6 @@ servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 servidor.bind(adresa)
 
-def accept_incoming_connections():
-    """Sets up handling for incoming clients."""
-    while True:
-        client_socket, client_address = servidor.accept()
-        print("%s:%s has connected." % client_address)
-        client_socket.send(bytes("Benvingut/benvinguda al nostre xat!\n"+
-                          "Escriu el teu nom i prem enter.", "utf8"))
-        Thread(target=handle_client, args=(client_socket, client_address)).start()
-
 def handle_client(client_socket, client_address):
     """ Gestiona la connexió d'un client """
     name = client_socket.recv(MIDA_MISSATGE).decode("utf8").strip()
@@ -70,7 +61,7 @@ def main():
     print("Esperant connexions des del port %s" % port)
     while True:
         client_socket, client_address = servidor.accept()
-        print("%s:%s has connected." % client_address)
+        print("%s:%s has connected. %s" % (client_address, client_socket.getnameinfo())
         client_socket.send(bytes("Benvingut/benvinguda al nostre xat!\n"+
                           "Escriu el teu nom i prem enter.", "utf8"))
         Thread(target=handle_client, args=(client_socket, client_address)).start()
