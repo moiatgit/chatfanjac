@@ -6,6 +6,7 @@
     - more modularity
     - consider what happens when the connexion is lost before receiving client name
     - consider broadcasting close connection when server is down
+    - check how to discover server ip or ask for it when launching
 """
 
 import sys
@@ -34,7 +35,8 @@ def arrenca_servidor(port):
     """ arrenca i retorna un servidor en localhost i el port indicat """
     servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    servidor.bind(('localhost', port))
+    #servidor.bind(('localhost', port))
+    servidor.bind(('192.168.1.250', port))
     servidor.listen(MAXIM_CONNEXIONS)
     return servidor
 
@@ -74,7 +76,7 @@ def handle_client(client_socket, client_address):
 
 def broadcast(msg, origen=None):
     """ envia a tots els clients excepte a l'origen si està establert """
-    print("Enviant a tothom el missatge %s: %s" % ("de %s" % clients[origen] if origen else "", msg))
+    print("Enviant a tothom el missatge %s: %s" % ("de %s" % clients[origen][0] if origen else "", msg))
     for client_socket in clients:
         if client_socket == origen:
             continue
