@@ -6,6 +6,7 @@
 import sys
 import socket
 from threading import Thread
+import collections
 
 
 MIDA_MISSATGE = 1024
@@ -22,10 +23,7 @@ port = int(sys.argv[1])
 # composa l'adreça en la que el servidor oferirà el servei
 adresa = ('localhost', port)
 
-
-# 
-clients = {}
-addresses = {}
+clients = {}        # clau: client valor: (nom, adreça)
 
 
 # creem el socket de servidor
@@ -36,30 +34,29 @@ servidor.bind(adresa)
 def accept_incoming_connections():
     """Sets up handling for incoming clients."""
     while True:
-        client, client_address = servidor.accept()
+        client_socket, client_address = servidor.accept()
         print("%s:%s has connected." % client_address)
-        client.send(bytes("Greetings from the cave!"+
-                          "Now type your name and press enter!", "utf8"))
-        addresses[client] = client_address
-        Thread(target=handle_client, args=(client,)).start()
+        client_socket.send(bytes("Benvingut/benvinguda al nostre xat!\n"+
+                          "Escriu el teu nom i prem enter.", "utf8"))
+        Thread(target=handle_client, args=(client_socket, client_address)).start()
 
-def handle_client(client):  # Takes client socket as argument.
-    """Handles a single client connection."""
-    name = client.recv(MIDA_MISSATGE).decode("utf8")
-    welcome = 'Welcome %s! If you ever want to quit, type {quit} to exit.' % name
-    client.send(bytes(welcome, "utf8"))
-    msg = "%s has joined the chat!" % name
+def handle_client(client_socket, client_address):
+    """ Gestiona la connexió d'un client """
+    name = client_socket.recv(MIDA_MISSATGE).decode("utf8").strip()
+    welcome = 'Benvingut/benvinguda %s! Quan vulguis sortir del xat, escriu {quit}.' % name
+    client_socket.send(bytes(welcome, "utf8"))
+    msg = "%s ha entrat al xat!" % name
     broadcast(bytes(msg, "utf8"))
-    clients[client] = name
+    clients[client_socket] = (name, client_address)
     while True:
-        msg = client.recv(MIDA_MISSATGE)
+        msg = client_socket.recv(MIDA_MISSATGE)
         if msg != bytes("{quit}", "utf8"):
             broadcast(msg, name+": ")
         else:
-            client.send(bytes("{quit}", "utf8"))
-            client.close()
-            del clients[client]
-            broadcast(bytes("%s has left the chat." % name, "utf8"))
+            client_socket.send(bytes("{quit}", "utf8"))
+            client_socket.close()
+            del clients[client_socket]
+            broadcast(bytes("%s ha sortit del xat." % name, "utf8"))
             break
 
 def broadcast(msg, prefix=""):  # prefix is for name identification.
@@ -71,9 +68,14 @@ def broadcast(msg, prefix=""):  # prefix is for name identification.
 def main():
     servidor.listen(MAXIM_CONNEXIONS)
     print("Esperant connexions des del port %s" % port)
-    accept_thread = Thread(target=accept_incoming_connections)
-    accept_thread.start()
-    accept_thread.join()
+    while True:
+        client_socket, client_address = servidor.accept()
+        print("%s:%s has connected." % client_address)
+        client_socket.send(bytes("Benvingut/benvinguda al nostre xat!\n"+
+                          "Escriu el teu nom i prem enter.", "utf8"))
+        Thread(target=handle_client, args=(client_socket, client_address)).start()
+
+    print("Finalitzem el servidor")
     servidor.close()
 
 
