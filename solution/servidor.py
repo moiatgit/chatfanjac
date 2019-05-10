@@ -7,6 +7,7 @@
     - consider what happens when the connexion is lost before receiving client name
     - consider broadcasting close connection when server is down
     - check how to discover server ip or ask for it when launching
+    - when closing connection (ctr-c) it keeps running.
 """
 
 import sys
@@ -31,12 +32,11 @@ port = int(sys.argv[1])
 clients = {}            # clau: client valor: (nom, adreça)
 desconnectats = set()   # clients pels que s'ha tancat la connexió
 
-def arrenca_servidor(port):
+def arrenca_servidor(host, port):
     """ arrenca i retorna un servidor en localhost i el port indicat """
     servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    #servidor.bind(('localhost', port))
-    servidor.bind(('192.168.1.250', port))
+    servidor.bind((host, port))
     servidor.listen(MAXIM_CONNEXIONS)
     return servidor
 
@@ -52,9 +52,7 @@ def envia(client_socket, missatge):
         print("Perduda la connexió amb %s@%s" % clients[client_socket])
         desconnectats.add(client_socket)
 
-#def afegeix_client(client_socket):
-
-def handle_client(client_socket, client_address):
+def gestiona_client(client_socket, client_address):
     """ Gestiona la connexió d'un client """
     envia(client_socket, "Benvingut/benvinguda al nostre xat! " +
                          "Escriu el teu nom i prem enter.")
@@ -69,10 +67,11 @@ def handle_client(client_socket, client_address):
             broadcast(msg, client_socket)
         else:
             client_socket.close()
-            desconnectats.add(client_socket)
             print("Finalitzada la connexió amb el client %s" % nom_participant)
-            broadcast("Ha abandonat el xat.", client_socket)
             break
+    desconnectats.add(client_socket)
+    broadcast("Ha abandonat el xat.", client_socket)
+    print("Finalitzat client " + nom_participant)
 
 def broadcast(msg, origen=None):
     """ envia a tots els clients excepte a l'origen si està establert """
@@ -90,14 +89,14 @@ def broadcast(msg, origen=None):
 
 
 try :
-    servidor = arrenca_servidor(port)
+    servidor = arrenca_servidor('', port)
     print("Esperant connexions des del port %s" % port)
     while True:
         client_socket, client_address = servidor.accept()
         print("Nova connexió des de %s:%s." % client_address)
-        Thread(target=handle_client, args=(client_socket, client_address)).start()
+        Thread(target=gestiona_client, args=(client_socket, client_address)).start()
 except KeyboardInterrupt as e:
-    broadcast('{quitquit}')
+    broadcast('{quit}')
     servidor.close()
     print("Servidor finalitzat correctament")
 
