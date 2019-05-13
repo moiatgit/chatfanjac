@@ -3,39 +3,63 @@
 import socket
 import sys
 from threading import Thread
+import chatroomutils
 
-MIDA_MISSATGE = 1024
-
+# Prompt que es mostrarà a la consola del client
 PROMPT = '> '
 
 
-socket_servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-if len(sys.argv) != 3:
-    print("Ús: %s host port" % sys.argv[0])
-    exit()
-host = sys.argv[1]
-port = int(sys.argv[2])
-socket_servidor.connect((host, port))
+def obte_ip_port_i_nom(argv):
+    """ 
+        obté la ip i el port del servidor, i el nom que tindrà el participant
+        dins de la sala de xat.
+
+        Si les dades no són correctes, finalitza l'execució
+    """
+    if len(argv) != 4:
+        print("Ús: %s «ip» «port» «nom participant»" % argv[0])
+        sys.exit()
+
+    if not argv[2].isdigit() or not (1024 < int(argv[2]) <= 65535):
+        print("ERROR: el port ha de ser un valor numèric entre 1025 i 65535")
+        sys.exit()
+
+    ip = argv[1]
+    port = int(argv[2])
+    nom = argv[3]
+
+    return (ip, port, nom)
+
+
+
+def connecta_amb_servidor(ip, port):
+    """ Connecta amb el servidor en la IP i port especificats.
+        Si la connexió no és possible, ho notifica i finalitza l'execució.
+    """
+    try:
+        socket_servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        socket_servidor.connect((ip, port))
+    except ConnectionRefusedError:
+        print("Error: no s'ha pogut connectar amb el servidor")
+        sys.exit()
 
 
 def gestiona_connexio():
-    """Handles receiving of messages."""
+    """ Gestiona la recepció de missatges per part de la connexió """
     while True:
         try:
             msg = rep()
             if not msg or msg == '{quit}':
-                print("XXX després de rep()")
                 break
             print(msg)
             print(PROMPT, end='')
         except OSError:
-            print("S'ha trencat la connexió amb el servidor")
+            print("ERROR: S'ha trencat la connexió amb el servidor")
             break
-    print("XXX finalitzat gestiona_connexio()")
 
 def rep():
-    """ obté un missatge del socket del client i el retorna com a string """
-    return socket_servidor.recv(MIDA_MISSATGE).decode("utf8").strip()
+    """ obté un missatge del servidor i el retorna com a string """
+    return socket_servidor.recv(chatroomutils.MIDA_MISSATGE).decode("utf8").strip()
 
 def send(missatge):  # event is passed by binders.
     """Handles sending of messages."""
@@ -46,6 +70,11 @@ def send(missatge):  # event is passed by binders.
         print("S'ha perdut la connexió amb el servidor")
         return False
 
+
+# Obté la IP i el port de connexió amb el servidor
+ip, port, nom = obte_ip_port_i_nom(sys.argv)
+
+socket_servidor = connecta_amb_servidor(ip, port)
 
 receive_thread = Thread(target=gestiona_connexio)
 receive_thread.start()

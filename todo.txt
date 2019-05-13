@@ -1,3 +1,33 @@
+- reimplement server
+
+    main thread reads from console commands: at least quit
+
+    listener thread accepts new connections and ends when:
+    - event is set
+
+    participant thread manages a client connection and ends when:
+    - event is set
+    - participant connection is broken
+    - participant sent {quit}
+
 - client should finish with ctrl-c instead of {quit}
+    - not sure of this now!
 
 - server should notify new enterings and leavings with a unnamed message
+
+- clients should launch with the name specified in the command line
+
+- server side
+    - more modularity
+    - consider what happens when the connexion is lost before receiving client name
+    - consider broadcasting close connection when server is down
+    - check how to discover server ip or ask for it when launching
+    - when closing connection (ctr-c) it keeps running.
+
+
+Further exercises ideas:
+
+- yes wanna
+
+- server accepts commands to send a message to a concrete participant or even
+  finishing they (e.g. because of missbehavior)

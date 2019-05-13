@@ -1,48 +1,66 @@
 #!/ur/bin/env python3
 """
     Implementació d'un servidor de chat
-
-    TODO:
-    - more modularity
-    - consider what happens when the connexion is lost before receiving client name
-    - consider broadcasting close connection when server is down
-    - check how to discover server ip or ask for it when launching
-    - when closing connection (ctr-c) it keeps running.
 """
 
 import sys
 import socket
 from threading import Thread
 import collections
+import chatroomutils
 
 
-MIDA_MISSATGE = 1024
-MAXIM_CONNEXIONS = 5
+class FanjacServer:
+    """ Aquesta classe implementa un servidor de sala de xat """
+
+    # Nombre màxim de connexions simultànies acceptades
+    MAXIM_CONNEXIONS = 10
+
+    def __init__(self, ip, port):
+        """ inicia el servidor amb aquesta ip i port """
+        self.ip = ip
+        self.port = port
+        clients = {}             # clau: client valor: (nom, adreça)
+        desconnectats = set()    # clients pels que s'ha tancat la connexió
+        self._arrenca_servidor()
+
+    def _arrenca_servidor(self):
+        """ intenta arrencar el servidor en la ip i ports. Si no ho
+            aconsegueix, mostra un missatge i finalitza l'execució. """
+        self.connexio = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.connexio.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.connexio.bind((ip, port))
+        self.connexio.listen(FanjacServer.MAXIM_CONNEXIONS)
+
+    def _rep(self, participant):
+        """ obté un missatge del participant """
+        return participant.recv(chatroomutils.MIDA_MISSATGE).decode("utf8").strip()
+
+class Participant:
+    """ Aquesta classe implementa un participant dins de la sala de xat """
+
+    def __init__(self)
+
+def obte_ip_i_port(argv):
+    """ 
+        obté la ip i el port de la llista d'arguments
+
+        Si les dades no són correctes, finalitza l'execució
+    """
+    if len(argv) != 3:
+        print("Ús: %s «ip» «port»" % argv[0])
+        sys.exit()
+
+    if not argv[2].isdigit() or not (1024 < int(argv[2]) <= 65535):
+        print("ERROR: el port ha de ser un valor numèric entre 1025 i 65535")
+        sys.exit()
+
+    ip = argv[1]
+    port = int(argv[2])
+
+    return (ip, port)
 
 
-# Obté el port de connexió
-if len(sys.argv) != 2:
-    print("Ús: %s port" % sys.argv[0])
-    sys.exit()
-
-port = int(sys.argv[1])
-
-# composa l'adreça en la que el servidor oferirà el servei
-
-clients = {}            # clau: client valor: (nom, adreça)
-desconnectats = set()   # clients pels que s'ha tancat la connexió
-
-def arrenca_servidor(host, port):
-    """ arrenca i retorna un servidor en localhost i el port indicat """
-    servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    servidor.bind((host, port))
-    servidor.listen(MAXIM_CONNEXIONS)
-    return servidor
-
-def rep(client_socket):
-    """ obté un missatge del socket del client i el retorna com a string """
-    return client_socket.recv(MIDA_MISSATGE).decode("utf8").strip()
 
 def envia(client_socket, missatge):
     """ envia un missatge a un client """
@@ -51,6 +69,7 @@ def envia(client_socket, missatge):
     except (BrokenPipeError, ConnectionResetError):
         print("Perduda la connexió amb %s@%s" % clients[client_socket])
         desconnectats.add(client_socket)
+
 
 def gestiona_client(client_socket, client_address):
     """ Gestiona la connexió d'un client """
@@ -73,6 +92,7 @@ def gestiona_client(client_socket, client_address):
     broadcast("Ha abandonat el xat.", client_socket)
     print("Finalitzat client " + nom_participant)
 
+
 def broadcast(msg, origen=None):
     """ envia a tots els clients excepte a l'origen si està establert """
     print("Enviant a tothom el missatge %s: %s" % ("de %s" % clients[origen][0] if origen else "", msg))
@@ -86,6 +106,10 @@ def broadcast(msg, origen=None):
         else:
             missatge = msg
         envia(client_socket, missatge)
+
+
+# Obté la IP i el port on s'oferirà el servei
+ip, port = obte_ip_i_port(sys.argv)
 
 
 try :
