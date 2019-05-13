@@ -1,0 +1,3 @@
+- client should finish with ctrl-c instead of {quit}
+
+- server should notify new enterings and leavings with a unnamed message

@@ -1,29 +1,60 @@
-This project is an attempt to prepare an activity for Fanjac
+#########
+fanjachat
+#########
 
-It is all about a chat
+This project is an activity for Fanjac's club
 
-The full code can be found at:
+It implements a chat room with a server able to accept multiple connexions.
 
-https://www.geeksforgeeks.org/simple-chat-room-using-python/
-
-The steps are:
-
-- make original code work
-
-- check dependencies and decide if you need to warn students
-
-- prepare a path to build the whole thing with easy but engaging steps
-
-Enhancements
-
-- convert to python3
-
-- add clients the hability to set a name (currently there's just the ip and is not a proper identifier when testing from the same machine)
-
-- add clients a command to end the connection gratefully
-
-- add server a summary of the number of current clients and, maybe, the names
-  Some kind of log
+Participants have a name and can receive and send messages in arbitrary order.
 
 
-Consider the python3 solution of https://medium.com/swlh/lets-write-a-chat-app-in-python-f6783a9ac170
+To make it work
+===============
+
+This chat requires the execution of two programs ``server.py`` and
+``client.py``.
+
+The server must be launched before any client.
+
+Server
+======
+
+Launch the server from a console by specifying the ip and port it will be
+listening
+
+::
+
+    $ python3 server.py ip port
+
+Finish server execution with ctrl-c
+
+**Important**: when server finishes it's execution, it will notify all the
+clients and they will finish their execution too.
+
+Clients
+=======
+
+Launch the client from a console by specifying the ip and port of the server
+
+::
+
+    $ python3 client ip port
+
+You can launch multiple clients
+
+To leave the room and finish, press ctrl-c.
+
+When a client enters and leaves the room, the rest of the participants get a
+message with a notification.
+
+
+
+References
+==========
+
+Inspired by the following sources:
+
+- https://www.geeksforgeeks.org/simple-chat-room-using-python/
+
+- https://medium.com/swlh/lets-write-a-chat-app-in-python-f6783a9ac170
