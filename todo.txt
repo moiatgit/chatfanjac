@@ -1,4 +1,4 @@
-- reimplement server
+- NOW: reimplement server
 
     main thread reads from console commands: at least quit
 

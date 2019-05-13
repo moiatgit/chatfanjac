@@ -8,6 +8,10 @@ import chatroomutils
 # Prompt que es mostrarà a la consola del client
 PROMPT = '> '
 
+# Mida màxima dels missatges a intercanviar entre el client i el servidor
+MIDA_MISSATGE = 1024
+
+
 
 def obte_ip_port_i_nom(argv):
     """ 
