@@ -3,7 +3,6 @@
 import socket
 import sys
 from threading import Thread
-import chatroomutils
 
 # Prompt que es mostrarà a la consola del client
 PROMPT = '> '
@@ -43,6 +42,7 @@ def connecta_amb_servidor(ip, port):
     try:
         socket_servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         socket_servidor.connect((ip, port))
+        return socket_servidor
     except ConnectionRefusedError:
         print("Error: no s'ha pogut connectar amb el servidor")
         sys.exit()
@@ -63,15 +63,16 @@ def gestiona_connexio():
 
 def rep():
     """ obté un missatge del servidor i el retorna com a string """
-    return socket_servidor.recv(chatroomutils.MIDA_MISSATGE).decode("utf8").strip()
+    return socket_servidor.recv(MIDA_MISSATGE).decode("utf8").strip()
 
 def send(missatge):  # event is passed by binders.
     """Handles sending of messages."""
     try:
         socket_servidor.send(bytes(missatge, "utf8"))
         return True
-    except:
+    except socket.error as e:
         print("S'ha perdut la connexió amb el servidor")
+        print(e)
         return False
 
 
@@ -84,7 +85,6 @@ receive_thread = Thread(target=gestiona_connexio)
 receive_thread.start()
 
 print("Connectat al servidor")
-nom = input("Indica el teu nom o àlies: ")
 send(nom)
 while receive_thread.is_alive():
     msg = input("%s" % PROMPT)

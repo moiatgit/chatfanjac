@@ -3,3 +3,4 @@
 .config/
 *.pyc
 .*.swo
+*.log

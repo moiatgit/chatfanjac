@@ -1,0 +1,18 @@
+@startuml
+    [*] --> anonim
+    anonim --> actiu: obté nom
+    anonim --> finalitzat: pérdua de connexió
+    actiu --> finalitzat: tancament del xat
+    actiu --> finalitzat: abandonament de participant
+    actiu --> finalitzat: pérdua de connexió
+    finalitzat --> [*]
+    note right of anonim
+        Un cop creat el fil, 
+        s'espera aconseguir 
+        el nom del nou participant
+    end note
+    note top of actiu
+        Escolta nous missatges del participant
+        i els reenvia a la resta de participants
+    end note
+@enduml

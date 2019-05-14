@@ -1,28 +1,60 @@
 - NOW: reimplement server
 
-    main thread reads from console commands: at least quit
+    On testing:
+    - currently server keeps broken connections as active. It might be necessary
+      that broadcast just checks and removes broken ones
 
-    listener thread accepts new connections and ends when:
-    - event is set
+    - (done) el fil principal
+      - (done) obté les dades de configuració del servei (ip i port)
+      - (done) llença el fil de gestió de peticions
+      - (done) rep i processa comandes de consola
+      - (done) crea i marca l'esdeveniment (threading.Event) de finalització per que la resta de fils
+        finalitzin la seva execució
 
-    participant thread manages a client connection and ends when:
-    - event is set
-    - participant connection is broken
-    - participant sent {quit}
+    - (done) el fil de gestió de peticions (executa la funció gestiona_peticions())
+      - (done) crea el socket de servidor
+      - (done) en cas que hi hagi problemes per crear el socket, marca l'esdeveniment de finalització
+      - (done) escolta el socket de servidor per noves peticions de clients per afegir-se al xat
+      - (done) en cas que hi hagi problemes per escoltar del socket, marca l'esdeveniment de finalització
+      - (done) llença un nou fil de gestió de participant per cada nou client
+      - (done) finalitza quan l'esdeveniment de finalització és marcat
+      - (done) tanca el servidor
 
-- client should finish with ctrl-c instead of {quit}
-    - not sure of this now!
+    - (done) el fil de gestió de participant (executa la funció gestiona_participant())
+      - (done) envia un missatge de benvinguda al nou participant i li demana el nom
+      - (done) escolta el socket d'un participant per obtenir el nom
+      - (done) en cas que tingui problemes per rebre el nom del participant. finalitza execució del fil
+      - (done) informa al nou participant que ha estat admés al xat
+      - (done) presenta el nou participant a la resta de participants actius del xat
+      - (done) afegeix el nou participant (amb el seu socket i nom) a la llista de participants actius al xat
+      - (done) escolta el socket del participant per nous missatges del participant
+      - (done) per cada missatge del participant, reenvia el missatge a la resta
+      - (done) quan rep el missatge de finalització per part del participant,
+        - (done) elimina el participant de la llista de participants actius
+        - (done) notifica la resta de participants que aquest ha abandonat el xat
+        - (done) finalitza l'execució del fil
+      - (done) quan l'esdeveniment de finalització és marcat,
+        - (done) notifica el participant que el xat es tanca
+        - (done) finalitza l'execució del fil
+      - (done) si en algun moment perd la connexió amb el participant,
+        - (done) elimina el participant de la llista de participants actius
+        - (done) notifica la resta de participants que aquest ha perdut la connexió
+        - (done) finalitza l'execució del fil
+      - (done) en finalitzar l'execució del fil, tanca el socket
 
-- server should notify new enterings and leavings with a unnamed message
 
-- clients should launch with the name specified in the command line
 
-- server side
-    - more modularity
-    - consider what happens when the connexion is lost before receiving client name
-    - consider broadcasting close connection when server is down
-    - check how to discover server ip or ask for it when launching
-    - when closing connection (ctr-c) it keeps running.
+- Review clients
+
+  - clients should launch with the name specified in the command line
+
+
+
+- create a highly simplified version of the code with just the comments
+  then another without the logging messages nor the error control
+  then another without the logging messages
+
+- consider designing a drawing depicting the whole stuff
 
 
 Further exercises ideas:
@@ -31,3 +63,8 @@ Further exercises ideas:
 
 - server accepts commands to send a message to a concrete participant or even
   finishing they (e.g. because of missbehavior)
+
+- demanar un password per poder entrar
+
+- no permetre noms duplicats dels participants
+  - ex. rebatejar el participant amb el nom seguit d'un nr incremental.
