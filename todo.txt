@@ -1,67 +1,8 @@
 - NOW: reimplement server
 
-    - current problem: no s'estan enviant/rebent els missatges
+    - current problem: 
 
-      el missatge de benvinguda es perd
-
-      els missatges dels participants es perden
-
-      el servidor no se n'assabenta que han sortit els clients en "rebre" {quit}
-
-
-    - (done) add timeout
-
-      methods rep() should return a tuple with (status, message) and envia()
-      should return just the status
-      status is a value OK, ERROR, TIMEOUT
-
-    On testing:
-    - currently server keeps broken connections as active. It might be necessary
-      that broadcast just checks and removes broken ones
-
-    - (done) el fil principal
-      - (done) obté les dades de configuració del servei (ip i port)
-      - (done) llença el fil de gestió de peticions
-      - (done) rep i processa comandes de consola
-      - (done) crea i marca l'esdeveniment (threading.Event) de finalització per que la resta de fils
-        finalitzin la seva execució
-
-    - (done) el fil de gestió de peticions (executa la funció gestiona_peticions())
-      - (done) crea el socket de servidor
-      - (done) en cas que hi hagi problemes per crear el socket, marca l'esdeveniment de finalització
-      - (done) escolta el socket de servidor per noves peticions de clients per afegir-se al xat
-      - (done) en cas que hi hagi problemes per escoltar del socket, marca l'esdeveniment de finalització
-      - (done) llença un nou fil de gestió de participant per cada nou client
-      - (done) finalitza quan l'esdeveniment de finalització és marcat
-      - (done) tanca el servidor
-
-    - (done) el fil de gestió de participant (executa la funció gestiona_participant())
-      - (done) envia un missatge de benvinguda al nou participant i li demana el nom
-      - (done) escolta el socket d'un participant per obtenir el nom
-      - (done) en cas que tingui problemes per rebre el nom del participant. finalitza execució del fil
-      - (done) informa al nou participant que ha estat admés al xat
-      - (done) presenta el nou participant a la resta de participants actius del xat
-      - (done) afegeix el nou participant (amb el seu socket i nom) a la llista de participants actius al xat
-      - (done) escolta el socket del participant per nous missatges del participant
-      - (done) per cada missatge del participant, reenvia el missatge a la resta
-      - (done) quan rep el missatge de finalització per part del participant,
-        - (done) elimina el participant de la llista de participants actius
-        - (done) notifica la resta de participants que aquest ha abandonat el xat
-        - (done) finalitza l'execució del fil
-      - (done) quan l'esdeveniment de finalització és marcat,
-        - (done) notifica el participant que el xat es tanca
-        - (done) finalitza l'execució del fil
-      - (done) si en algun moment perd la connexió amb el participant,
-        - (done) elimina el participant de la llista de participants actius
-        - (done) notifica la resta de participants que aquest ha perdut la connexió
-        - (done) finalitza l'execució del fil
-      - (done) en finalitzar l'execució del fil, tanca el socket
-
-
-
-- Review clients
-
-  - clients should launch with the name specified in the command line
+      No passa test03
 
 
 
@@ -113,3 +54,6 @@ Further exercises ideas:
 
 - no permetre noms duplicats dels participants
   - ex. rebatejar el participant amb el nom seguit d'un nr incremental.
+
+- el primer participant hauria de rebre un missatge dient quelcom similar a "de
+  moment estàs tu només"

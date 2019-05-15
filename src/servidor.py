@@ -115,10 +115,14 @@ def rep(connexio):
        Si no és possible obtenir el missatge del participant, es retorna None
    """
    try:
-       return (RESULTA_OK, connexio.recv(MIDA_MISSATGE).decode("utf8").strip())
+       missatge = connexio.recv(MIDA_MISSATGE).decode("utf8").strip()
+       logging.info("Rebut missatge %s" % missatge)
+       return (RESULTA_OK, missatge)
    except socket.timeout:
+       logging.warning("timeout en intentar rebre")
        return (RESULTA_TIMEOUT, None)
    except OSError:
+       logging.error("error en intentar rebre")
        return (RESULTA_ERROR, None)
 
 
@@ -132,7 +136,7 @@ def broadcast(participants, missatge, excepte = []):
             continue
         resultat = envia(connexio, missatge)
         if resultat != RESULTA_OK:
-            logging.warning("Perduda la connexió amb el participant %s" % participant[connexio])
+            logging.warning("Perduda la connexió amb el participant %s" % participants[connexio])
             connexio.close()
             del(participants[connexio])
 
@@ -143,27 +147,31 @@ def gestiona_participant(connexio, participants, finalitzacio):
         participant a traves de la connexió fins que la marca de finalització
         s'estableix
     """
-    logging.info("Iniciada gestió per nou participant %s" % participants[connexio])
+    logging.info("Iniciada gestió per nou participant %s" % str(participants[connexio]))
 
     # obté el nom del participant
     resultat, nom = rep(connexio)
     if resultat != RESULTA_OK:    # no s'ha aconseguit el nom i es finalitza l'execució
-        logging.warning("No s'aconsegueix obtenir el nom del participant %s. Finalitzat." % participants[connexio])
-        connexio.close()
+        logging.warning("No s'aconsegueix obtenir el nom del participant %s. Finalitzat." % str(participants[connexio]))
         del(participants[connexio])
+        connexio.close()
+        logging.info("XXX connection closed!")
         return
 
     # afegeix el nom del nou participant a la sala de participants
     participants[connexio] = (participants[connexio][0], nom)
-    logging.info("Vinculat el nou participant amb el seu nom %s" % participants[connexio])
+    logging.info("Vinculat el nou participant amb el seu nom %s" % str(participants[connexio]))
 
     # envia missatge de benvinguda
     missatge = "Hola %s. Acabes d'entrar a la sala de xat de Fanjac. " \
-               "De moment hi ha %s participants" % len(participants)
+               "De moment hi ha %s participants" % (nom, len(participants))
+    logging.info("Enviant missatge de benvinguda")
     resultat = envia(connexio, missatge)
     if resultat != RESULTA_OK:
-        logging.warning("No s'aconsegueix enviar notificació d'acceptació al participant %s. Finalitzat." % participants[connexio])
+        logging.warning("No s'aconsegueix enviar notificació d'acceptació al participant %s. Finalitzat." % str(participants[connexio]))
         del(participants[connexio])
+        connexio.close()
+        logging.info("XXX connection closed!")
         return
 
     # envia a la resta de participants la notificació del nou participant
@@ -177,34 +185,32 @@ def gestiona_participant(connexio, participants, finalitzacio):
             # s'ha exhaurit el temps, donem-li una altra oportunitat
             continue
 
-        if resutat == RESULTA_ERROR:
-            logging.warning("Perduda la connexió amb el participant %s" % participants[connexio])
-            missatge = "S'ha perdut la connexió amb %s" % participants[connexio][1]
+        if resultat == RESULTA_ERROR:
+            logging.warning("Perduda la connexió amb el participant %s" % str(participants[connexio]))
+            missatge = "S'ha perdut la connexió amb %s" % str(participants[connexio])[1]
             # envia notificació de finalització de participant
             broadcast(participants, missatge, excepte=[connexio])
-            # elimina el participant de la llista de participants
-            del(participants[connexio])
             break
 
         if missatge == '{quit}':
-            logging.info("Rebuda petició de finalització per part del participant %s" % participants[connexio])
+            logging.info("Rebuda petició de finalització per part del participant %s" % str(participants[connexio]))
             missatge = "%s abandona la sala de xat" % participants[connexio][1]
             # envia notificació de finalització de participant
             broadcast(participants, missatge, excepte=[connexio])
-            # elimina el participant de la llista de participants
-            del(participants[connexio])
             break
 
         logging.info("Rebut missatge per part de participant %s: %s" % (participants[connexio][1], missatge))
         reenviament = "%s: %s" % (participants[connexio][1], missatge)
         broadcast(participants, missatge, excepte=[connexio])
 
-    if finalització.isSet():
+    if finalitzacio.isSet():
         missatge = "La sessió de xat ha estat tancada. Disculpa les molèsties."
         envia(connexio, missatge)
 
-    logging.info("Finalitza la gestió del participant %s" % participants[connexio])
+    logging.info("Finalitza la gestió del participant %s" % str(participants[connexio]))
+    # elimina el participant de la llista de participants
     connexio.close()
+    del(participants[connexio])
 
 
 def gestiona_peticions(ip, port, participants, finalitzacio):
@@ -224,7 +230,8 @@ def gestiona_peticions(ip, port, participants, finalitzacio):
             logging.info("Nova connexió des de l'adreça %s" % str(adressa))
             nova_connexio.settimeout(MAXIM_ESPERA_CONNEXIO)
             participants[nova_connexio] = (adressa, None)      # de moment no sabem el nom del nou participant
-            threading.Thread(target=gestiona_participant, args=(nova_connexio, participants, finalitzacio))
+            threading.Thread(target=gestiona_participant, args=(nova_connexio, participants, finalitzacio, )).start()
+            logging.info("Llençat fil d'execució per gestionar el nou participant %s" % str(participants[nova_connexio]))
         except socket.timeout:
             # ha passat el temps màxim d'espera. Tornem a comprovar si encara cal continuar
             pass
