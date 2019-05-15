@@ -1,6 +1,6 @@
 #!/ur/bin/env python3
 """
-    Implementació d'un servidor de chat
+    Implementació d'un servidor de xat
 
     La implementació consisteix en tres tipus de fils d'execució:
 
@@ -21,7 +21,6 @@
       - tanca el servidor
 
     - el fil de gestió de participant (executa la funció gestiona_participant())
-      - envia un missatge de benvinguda al nou participant i li demana el nom
       - escolta el socket d'un participant per obtenir el nom
       - en cas que tingui problemes per rebre el nom del participant. finalitza execució del fil
       - informa al nou participant que ha estat admés al xat
@@ -55,6 +54,14 @@ MIDA_MISSATGE = 1024
 # Nombre màxim de connexions simultànies acceptades
 MAXIM_CONNEXIONS = 10
 
+# Temps d'espera en les operacions d'entrada/sortida amb les connexions (en segons)
+MAXIM_ESPERA_CONNEXIO = 2
+
+# Constants per indicar el resultat d'una operació d'entrada/sortida amb sockets
+RESULTA_OK = 0          # operació realitzada amb éxit
+RESULTA_ERROR = 1       # operació no realitzada: s'ha produït un error
+RESULTA_TIMEOUT = 2     # operació no realitzada: s'ha superat el temps
+
 def obte_ip_i_port(argv):
     """
         obté la ip i el port de la llista d'arguments
@@ -82,6 +89,7 @@ def arrenca_servidor(ip, port, finalitzacio):
         connexio = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         connexio.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         connexio.bind((ip, port))
+        connexio.settimeout(MAXIM_ESPERA_CONNEXIO)
         connexio.listen(MAXIM_CONNEXIONS)
         return connexio
     except OSError as e:
@@ -95,9 +103,11 @@ def envia(connexio, missatge):
         Retorna cert si ho aconsegueix. Fals altrament. """
     try:
         connexio.send(bytes(missatge, "utf8"))
-        return True
-    except (BrokenPipeError, ConnectionResetError):
-        return False
+        return RESULTA_OK
+    except socket.timeout:
+        return RESULTA_TIMEOUT
+    except OSError:
+        return RESULTA_ERROR
 
 
 def rep(connexio):
@@ -105,22 +115,26 @@ def rep(connexio):
        Si no és possible obtenir el missatge del participant, es retorna None
    """
    try:
-       return connexio.recv(MIDA_MISSATGE).decode("utf8").strip()
-   except (BrokenPipeError, ConnectionResetError):
-       return None
+       return (RESULTA_OK, connexio.recv(MIDA_MISSATGE).decode("utf8").strip())
+   except socket.timeout:
+       return (RESULTA_TIMEOUT, None)
+   except OSError:
+       return (RESULTA_ERROR, None)
 
 
 def broadcast(participants, missatge, excepte = []):
     """ envia el missatge a tots els participants, excepte als que apareguin a
         la llista d'excepcions
-        Atenció: aquesta funció no comprova si s'ha aconseguit enviar correctament 
-        a un dels participants.
     """
     logging.info("Enviant missatge a tothom %s" % missatge)
     for connexio in participants:
         if connexio in excepte:  # ignorem els participants a exceptuar
             continue
-        envia(connexio, missatge)
+        resultat = envia(connexio, missatge)
+        if resultat != RESULTA_OK:
+            logging.warning("Perduda la connexió amb el participant %s" % participant[connexio])
+            connexio.close()
+            del(participants[connexio])
 
 
 def gestiona_participant(connexio, participants, finalitzacio):
@@ -131,20 +145,13 @@ def gestiona_participant(connexio, participants, finalitzacio):
     """
     logging.info("Iniciada gestió per nou participant %s" % participants[connexio])
 
-    # envia benvinguda i petició de nom
-    missatge = "Hola. Abans d'entrar al xat, per favor, indica el teu nom"
-    correcte = envia(connexió, missatge)
-    if not correcte:    # no s'ha aconseguit enviar i es finalitza l'execució
-        logging.warning("No s'aconsegueix enviar benvinguda al participant %s. Finalitzat." % participants[connexio])
-        return
-
-
     # obté el nom del participant
-    nom = rep(connexio)
-    if not nom:    # no s'ha aconseguit el nom i es finalitza l'execució
+    resultat, nom = rep(connexio)
+    if resultat != RESULTA_OK:    # no s'ha aconseguit el nom i es finalitza l'execució
         logging.warning("No s'aconsegueix obtenir el nom del participant %s. Finalitzat." % participants[connexio])
+        connexio.close()
+        del(participants[connexio])
         return
-
 
     # afegeix el nom del nou participant a la sala de participants
     participants[connexio] = (participants[connexio][0], nom)
@@ -153,9 +160,10 @@ def gestiona_participant(connexio, participants, finalitzacio):
     # envia missatge de benvinguda
     missatge = "Hola %s. Acabes d'entrar a la sala de xat de Fanjac. " \
                "De moment hi ha %s participants" % len(participants)
-    correcte = envia(connexio, missatge)
-    if not correcte:
+    resultat = envia(connexio, missatge)
+    if resultat != RESULTA_OK:
         logging.warning("No s'aconsegueix enviar notificació d'acceptació al participant %s. Finalitzat." % participants[connexio])
+        del(participants[connexio])
         return
 
     # envia a la resta de participants la notificació del nou participant
@@ -164,8 +172,12 @@ def gestiona_participant(connexio, participants, finalitzacio):
 
     # comença a gestionar els missatges que generi el participant
     while not finalitzacio.isSet():
-        missatge = rep(connexio)
-        if not missatge:
+        resultat, missatge = rep(connexio)
+        if resultat == RESULTA_TIMEOUT:
+            # s'ha exhaurit el temps, donem-li una altra oportunitat
+            continue
+
+        if resutat == RESULTA_ERROR:
             logging.warning("Perduda la connexió amb el participant %s" % participants[connexio])
             missatge = "S'ha perdut la connexió amb %s" % participants[connexio][1]
             # envia notificació de finalització de participant
@@ -182,12 +194,15 @@ def gestiona_participant(connexio, participants, finalitzacio):
             # elimina el participant de la llista de participants
             del(participants[connexio])
             break
+
         logging.info("Rebut missatge per part de participant %s: %s" % (participants[connexio][1], missatge))
         reenviament = "%s: %s" % (participants[connexio][1], missatge)
         broadcast(participants, missatge, excepte=[connexio])
+
     if finalització.isSet():
         missatge = "La sessió de xat ha estat tancada. Disculpa les molèsties."
         envia(connexio, missatge)
+
     logging.info("Finalitza la gestió del participant %s" % participants[connexio])
     connexio.close()
 
@@ -206,14 +221,18 @@ def gestiona_peticions(ip, port, participants, finalitzacio):
     while not finalitzacio.isSet():
         try:
             nova_connexio, adressa = servidor.accept()
-        except socket.error:
+            logging.info("Nova connexió des de l'adreça %s" % str(adressa))
+            nova_connexio.settimeout(MAXIM_ESPERA_CONNEXIO)
+            participants[nova_connexio] = (adressa, None)      # de moment no sabem el nom del nou participant
+            threading.Thread(target=gestiona_participant, args=(nova_connexio, participants, finalitzacio))
+        except socket.timeout:
+            # ha passat el temps màxim d'espera. Tornem a comprovar si encara cal continuar
+            pass
+        except OSError:
             logging.warning("Problemes amb la connexió del servidor. Es notifica a tots els usuaris")
             missatge = "Ha caigut el servidor de xat. No es podran acceptar nous participants"
             broadcast(participants, missatge)
             break
-        logging.info("Nova connexió des de l'adreça %s" % str(adressa))
-        participants[nova_connexio] = (adressa, None)      # de moment no sabem el nom del nou participant
-        threading.Thread(target=gestiona_participant, args=(nova_connexio, participants, finalitzacio))
 
     # tanca el servidor
     servidor.close()

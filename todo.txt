@@ -1,5 +1,20 @@
 - NOW: reimplement server
 
+    - current problem: no s'estan enviant/rebent els missatges
+
+      el missatge de benvinguda es perd
+
+      els missatges dels participants es perden
+
+      el servidor no se n'assabenta que han sortit els clients en "rebre" {quit}
+
+
+    - (done) add timeout
+
+      methods rep() should return a tuple with (status, message) and envia()
+      should return just the status
+      status is a value OK, ERROR, TIMEOUT
+
     On testing:
     - currently server keeps broken connections as active. It might be necessary
       that broadcast just checks and removes broken ones
@@ -55,6 +70,36 @@
   then another without the logging messages
 
 - consider designing a drawing depicting the whole stuff
+
+- consider for simplification the example found at https://docs.python.org/3/library/socket.html#socket-timeouts
+
+    # Echo server program
+    import socket
+
+    HOST = ''                 # Symbolic name meaning all available interfaces
+    PORT = 50007              # Arbitrary non-privileged port
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((HOST, PORT))
+        s.listen(1)
+        conn, addr = s.accept()
+        with conn:
+            print('Connected by', addr)
+            while True:
+                data = conn.recv(1024)
+                if not data: break
+                conn.sendall(data)
+
+    # Echo client program
+    import socket
+
+    HOST = 'daring.cwi.nl'    # The remote host
+    PORT = 50007              # The same port as used by the server
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((HOST, PORT))
+        s.sendall(b'Hello, world')
+        data = s.recv(1024)
+    print('Received', repr(data))
+
 
 
 Further exercises ideas:
