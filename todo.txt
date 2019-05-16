@@ -4,6 +4,12 @@
 
       No passa test03
 
+      Sembla que broadcast() en ser executat per més d'un fil, entra en
+      conflicte quan ha d'enviar un missatge i la notificació de finalització
+
+      Potser caldria que broadcast() fiqués els missatges a una cua i que
+      un altre thread anés enviant els missatges a tothom.
+
 
 
 - create a highly simplified version of the code with just the comments

@@ -97,27 +97,33 @@ def arrenca_servidor(ip, port, finalitzacio):
         finalitzacio.set()
 
 
-
 def envia(connexio, missatge):
     """ Tracta d'enviar el missatge al participant.
         Retorna cert si ho aconsegueix. Fals altrament. """
     try:
         connexio.send(bytes(missatge, "utf8"))
+        logging.info("Enviat missatge %s" % missatge)
         return RESULTA_OK
     except socket.timeout:
         return RESULTA_TIMEOUT
-    except OSError:
+    except OSError as e:
+        logging.error("envia(%s) retorna error %s" % (missatge, e.errno))
         return RESULTA_ERROR
 
 
 def rep(connexio):
    """ obté un missatge del participant i es retorna
-       Si no és possible obtenir el missatge del participant, es retorna None
+       Si l'espera supera el temps mæxim, retorna com a resultat RESULTA_TIMEOUT
+       Si no és possible obtenir el missatge del participant, ja sigui per que es produeix una excepció o perquè el missatge és la cadena buida, es retorna RESULTA_ERROR
+       Si tot ha anat correcte, el resultat és RESULTA_OK
+       El resultat és la tupla (resultat, missatge)
    """
    try:
-       missatge = connexio.recv(MIDA_MISSATGE).decode("utf8").strip()
-       logging.info("Rebut missatge %s" % missatge)
-       return (RESULTA_OK, missatge)
+       missatge = connexio.recv(MIDA_MISSATGE).decode("utf8")
+       if len(missatge) == 0:
+           return (RESULTA_ERROR, '')
+       logging.info("Rebut missatge '%s'" % missatge)
+       return (RESULTA_OK, missatge.strip())
    except socket.timeout:
        logging.warning("timeout en intentar rebre")
        return (RESULTA_TIMEOUT, None)
@@ -131,14 +137,10 @@ def broadcast(participants, missatge, excepte = []):
         la llista d'excepcions
     """
     logging.info("Enviant missatge a tothom %s" % missatge)
-    for connexio in participants:
+    for connexio in list(participants.keys()):
         if connexio in excepte:  # ignorem els participants a exceptuar
             continue
         resultat = envia(connexio, missatge)
-        if resultat != RESULTA_OK:
-            logging.warning("Perduda la connexió amb el participant %s" % participants[connexio])
-            connexio.close()
-            del(participants[connexio])
 
 
 def gestiona_participant(connexio, participants, finalitzacio):
@@ -181,6 +183,7 @@ def gestiona_participant(connexio, participants, finalitzacio):
     # comença a gestionar els missatges que generi el participant
     while not finalitzacio.isSet():
         resultat, missatge = rep(connexio)
+        logging.info("Participant %s ha rebut missatge: '%s'" % (str(participants[connexio]), missatge))
         if resultat == RESULTA_TIMEOUT:
             # s'ha exhaurit el temps, donem-li una altra oportunitat
             continue

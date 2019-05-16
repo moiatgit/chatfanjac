@@ -128,13 +128,22 @@ def envia(connexio, missatge):
 
 def rep(connexio):
    """ obté un missatge del participant i es retorna
-       Si no és possible obtenir el missatge del participant, es retorna None
+       Si l'espera supera el temps mæxim, retorna com a resultat RESULTA_TIMEOUT
+       Si no és possible obtenir el missatge del participant, ja sigui per que es produeix una excepció o perquè el missatge és la cadena buida, es retorna RESULTA_ERROR
+       Si tot ha anat correcte, el resultat és RESULTA_OK
+       El resultat és la tupla (resultat, missatge)
    """
    try:
-       return (RESULTA_OK, connexio.recv(MIDA_MISSATGE).decode("utf8").strip())
+       missatge = connexio.recv(MIDA_MISSATGE).decode("utf8")
+       if len(missatge) == 0:
+           return (RESULTA_ERROR, '')
+       logging.info("Rebut missatge '%s'" % missatge)
+       return (RESULTA_OK, missatge.strip())
    except socket.timeout:
+       logging.warning("timeout en intentar rebre")
        return (RESULTA_TIMEOUT, None)
    except OSError:
+       logging.error("error en intentar rebre")
        return (RESULTA_ERROR, None)
 
 
