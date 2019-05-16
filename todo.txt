@@ -1,3 +1,4 @@
+NOW: problems again with test03
 
 - és possible que socket disponga de radress amb l'adreça
   it is!  getpeername()

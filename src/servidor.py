@@ -147,19 +147,19 @@ def rep(connexio):
        return (RESULTA_ERROR, None)
 
 
-def gestiona_participant(connexio, adressa, participants, missatges, finalitzacio):
+def gestiona_participant(connexio, participants, missatges, finalitzacio):
     """ 
         Aquesta és la funció que gestiona les comunicacions que envia un
         participant a traves de la connexió fins que la marca de finalització
         s'estableix
     """
-    logging.info("Iniciada gestió per nou participant %s" % str(adressa))
+    logging.info("Iniciada gestió per nou participant %s" % str(connexio.getpeername()))
 
     # obté el nom del participant
     resultat, nom = rep(connexio)
     if resultat != RESULTA_OK:    # no s'ha aconseguit el nom i es finalitza l'execució
-        logging.warning("No s'aconsegueix obtenir el nom del participant %s. Finalitzat." % str(adressa))
-        logging.debug("XXX YYY (1) before closing unnamed participant %s" % str(adressa))
+        logging.warning("No s'aconsegueix obtenir el nom del participant %s. Finalitzat." % str(connexio.getpeername()))
+        logging.debug("XXX YYY (1) before closing unnamed participant %s" % str(connexio.getpeername()))
         connexio.close()
         return
 
@@ -169,12 +169,12 @@ def gestiona_participant(connexio, adressa, participants, missatges, finalitzaci
                "De moment hi ha %s participants" % (nom, len(participants) + 1)
     resultat = envia(connexio, missatge)
     if resultat != RESULTA_OK:
-        logging.info("No s'aconsegueix enviar la benvinguda al participant %s. Finalitzat." % str((adressa, nom)))
-        logging.debug("XXX YYY (2) before closing participant %s" % str((adressa, nom)))
+        logging.info("No s'aconsegueix enviar la benvinguda al participant %s. Finalitzat." % str((connexio.getpeername(), nom)))
+        logging.debug("XXX YYY (2) before closing participant %s" % str((connexio.getpeername(), nom)))
         connexio.close()
 
     # afegeix el nom del nou participant a la sala de participants
-    participants[connexio] = (adressa, nom)
+    participants[connexio] = nom
     logging.info("Vinculat el nou participant amb el seu nom %s" % str(participants[connexio]))
 
     # envia a la resta de participants la notificació del nou participant
@@ -235,7 +235,7 @@ def gestiona_peticions(ip, port, participants, missatges, finalitzacio):
             nova_connexio, adressa = servidor.accept()
             logging.info("Nova connexió des de l'adreça %s" % str(adressa))
             nova_connexio.settimeout(MAXIM_ESPERA_CONNEXIO)
-            llenca_fil_gestio_participant(nova_connexio, adressa, participants, missatges, finalitzacio)
+            llenca_fil_gestio_participant(nova_connexio, participants, missatges, finalitzacio)
             logging.info("Llençat fil d'execució per gestionar el nou participant %s" % str(adressa))
         except socket.timeout:
             # ha passat el temps màxim d'espera. Tornem a comprovar si encara cal continuar
@@ -288,7 +288,7 @@ def envia_missatges(participants, missatges, finalitzacio):
                 destinatari.close()
                 logging.info("Tancada la connexió del participant %s" % str(participants[destinatari]))
                 continue
-            logging.info("Enviat missatge a destinatari %s missatge '%s'" % (participants[destinatari], missatge))
+        logging.info("Enviat missatge a destinatari %s missatge '%s'" % (participants[destinatari], missatge))
     logging.info("Finalitza la gestió d'enviaments de missatges")
 
 
@@ -304,9 +304,9 @@ def llenca_fil_enviament_de_missatges(participants, missatges, finalitzacio):
     logging.info("XXX llençat el fil d'enviament de missatges")
 
 
-def llenca_fil_gestio_participant(connexio, adressa, participants, missatges, finalitzacio):
+def llenca_fil_gestio_participant(connexio, participants, missatges, finalitzacio):
     """ llença el fil d'execució que gestionarà els missatges que enviï un parcicipant """
-    threading.Thread(target=gestiona_participant, args=(connexio, adressa, participants, missatges, finalitzacio, )).start()
+    threading.Thread(target=gestiona_participant, args=(connexio, participants, missatges, finalitzacio, )).start()
 
 
 def processa_comandes(participants, finalitzacio):
