@@ -2,15 +2,12 @@
 
     - current problem: 
 
-      No passa test03
+      No passa cap test
+
+        He afegit el thread d'enviament i ara no passa cap test!
 
       Sembla que broadcast() en ser executat per més d'un fil, entra en
       conflicte quan ha d'enviar un missatge i la notificació de finalització
-
-      Potser caldria que broadcast() fiqués els missatges a una cua i que
-      un altre thread anés enviant els missatges a tothom.
-
-
 
 - create a highly simplified version of the code with just the comments
   then another without the logging messages nor the error control

@@ -2,12 +2,14 @@
 """
     Implementació d'un servidor de xat
 
-    La implementació consisteix en tres tipus de fils d'execució:
+    La implementació consisteix en quatre tipus de fils d'execució:
 
     - el fil principal
       - obté les dades de configuració del servei (ip i port)
+      - llença el fil d'enviament de missatges
       - llença el fil de gestió de peticions
       - rep i processa comandes de consola
+      - crea la qua de missatges que permet comunicar els altres fils amb el fil d'enviament de missatges
       - crea i marca l'esdeveniment (threading.Event) de finalització per que la resta de fils
         finalitzin la seva execució
 
@@ -18,7 +20,7 @@
       - en cas que hi hagi problemes per escoltar del socket, marca l'esdeveniment de finalització
       - llença un nou fil de gestió de participant per cada nou client
       - finalitza quan l'esdeveniment de finalització és marcat
-      - tanca el servidor
+      - tanca el socket de servidor
 
     - el fil de gestió de participant (executa la funció gestiona_participant())
       - escolta el socket d'un participant per obtenir el nom
@@ -31,22 +33,32 @@
       - quan rep el missatge de finalització per part del participant,
         - elimina el participant de la llista de participants actius
         - notifica la resta de participants que aquest ha abandonat el xat
+        - tanca la connexio del participant
         - finalitza l'execució del fil
       - quan l'esdeveniment de finalització és marcat,
         - notifica el participant que el xat es tanca
+        - tanca la connexio del participant
         - finalitza l'execució del fil
       - si en algun moment perd la connexió amb el participant,
-        - elimina el participant de la llista de participants actius
         - notifica la resta de participants que aquest ha perdut la connexió
+        - tanca la connexio del participant
         - finalitza l'execució del fil
       - en finalitzar l'execució del fil, tanca el socket
 
+    - el fil d'enviament de missatges (executa la funcio envia_missatges())
+      - processa la cua de missatges: és l'únic fil que en treu elements
+      - finalitza quan la marca de finalització ha estat establerta i la cua de missatges buida
+      - els elements de la cua de missatges inclouen la informació del destinatari i el missatge
+      - envia missatges només als participants que encara hi són actius
+      - si un enviament falla considera perduda la connexió amb el participant i tanca la connexió.
+        El tancament de la connexió provocarà la finalització del fil de gestió del participant.
 """
 
 import sys
 import socket
 import threading
 import logging
+import queue
 
 # Mida màxima dels missatges a intercanviar entre el client i el servidor
 MIDA_MISSATGE = 1024
@@ -61,6 +73,7 @@ MAXIM_ESPERA_CONNEXIO = 2
 RESULTA_OK = 0          # operació realitzada amb éxit
 RESULTA_ERROR = 1       # operació no realitzada: s'ha produït un error
 RESULTA_TIMEOUT = 2     # operació no realitzada: s'ha superat el temps
+
 
 def obte_ip_i_port(argv):
     """
@@ -132,18 +145,7 @@ def rep(connexio):
        return (RESULTA_ERROR, None)
 
 
-def broadcast(participants, missatge, excepte = []):
-    """ envia el missatge a tots els participants, excepte als que apareguin a
-        la llista d'excepcions
-    """
-    logging.info("Enviant missatge a tothom %s" % missatge)
-    for connexio in list(participants.keys()):
-        if connexio in excepte:  # ignorem els participants a exceptuar
-            continue
-        resultat = envia(connexio, missatge)
-
-
-def gestiona_participant(connexio, participants, finalitzacio):
+def gestiona_participant(connexio, adressa, participants, finalitzacio):
     """ 
         Aquesta és la funció que gestiona les comunicacions que envia un
         participant a traves de la connexió fins que la marca de finalització
@@ -155,30 +157,21 @@ def gestiona_participant(connexio, participants, finalitzacio):
     resultat, nom = rep(connexio)
     if resultat != RESULTA_OK:    # no s'ha aconseguit el nom i es finalitza l'execució
         logging.warning("No s'aconsegueix obtenir el nom del participant %s. Finalitzat." % str(participants[connexio]))
-        del(participants[connexio])
         connexio.close()
-        logging.info("XXX connection closed!")
         return
 
     # afegeix el nom del nou participant a la sala de participants
-    participants[connexio] = (participants[connexio][0], nom)
+    participants[connexio] = (adressa, nom)
     logging.info("Vinculat el nou participant amb el seu nom %s" % str(participants[connexio]))
 
     # envia missatge de benvinguda
     missatge = "Hola %s. Acabes d'entrar a la sala de xat de Fanjac. " \
                "De moment hi ha %s participants" % (nom, len(participants))
-    logging.info("Enviant missatge de benvinguda")
-    resultat = envia(connexio, missatge)
-    if resultat != RESULTA_OK:
-        logging.warning("No s'aconsegueix enviar notificació d'acceptació al participant %s. Finalitzat." % str(participants[connexio]))
-        del(participants[connexio])
-        connexio.close()
-        logging.info("XXX connection closed!")
-        return
+    missatges.put((connexio, [], missatge))
 
     # envia a la resta de participants la notificació del nou participant
     missatge = "S'ha afegit %s. Ara ja sou %s participants" % (nom, len(participants))
-    broadcast(participants, missatge, excepte=[connexio])
+    missatges.put((None, [connexio], missatge))
 
     # comença a gestionar els missatges que generi el participant
     while not finalitzacio.isSet():
@@ -192,31 +185,31 @@ def gestiona_participant(connexio, participants, finalitzacio):
             logging.warning("Perduda la connexió amb el participant %s" % str(participants[connexio]))
             missatge = "S'ha perdut la connexió amb %s" % str(participants[connexio])[1]
             # envia notificació de finalització de participant
-            broadcast(participants, missatge, excepte=[connexio])
+            missatges.put((None, [connexio], missatge))
             break
 
         if missatge == '{quit}':
             logging.info("Rebuda petició de finalització per part del participant %s" % str(participants[connexio]))
             missatge = "%s abandona la sala de xat" % participants[connexio][1]
             # envia notificació de finalització de participant
-            broadcast(participants, missatge, excepte=[connexio])
+            missatges.put((None, [connexio], missatge))
             break
 
         logging.info("Rebut missatge per part de participant %s: %s" % (participants[connexio][1], missatge))
         reenviament = "%s: %s" % (participants[connexio][1], missatge)
-        broadcast(participants, missatge, excepte=[connexio])
+        missatges.put((None, [connexio], missatge))
 
     if finalitzacio.isSet():
         missatge = "La sessió de xat ha estat tancada. Disculpa les molèsties."
-        envia(connexio, missatge)
+        missatges.put((connexio, [], missatge))
 
     logging.info("Finalitza la gestió del participant %s" % str(participants[connexio]))
     # elimina el participant de la llista de participants
     connexio.close()
-    del(participants[connexio])
+    participants.pop(connexio, None)
 
 
-def gestiona_peticions(ip, port, participants, finalitzacio):
+def gestiona_peticions(ip, port, participants, missatges, finalitzacio):
     """ Aquesta és la funció que gestiona les noves peticions del servidor
 
         Es manté escoltant noves peticions fins que es marqui la finalització o
@@ -232,8 +225,7 @@ def gestiona_peticions(ip, port, participants, finalitzacio):
             nova_connexio, adressa = servidor.accept()
             logging.info("Nova connexió des de l'adreça %s" % str(adressa))
             nova_connexio.settimeout(MAXIM_ESPERA_CONNEXIO)
-            participants[nova_connexio] = (adressa, None)      # de moment no sabem el nom del nou participant
-            threading.Thread(target=gestiona_participant, args=(nova_connexio, participants, finalitzacio, )).start()
+            llenca_fil_gestio_participant(nova_connexio, adressa, participants, missatges, finalitzacio)
             logging.info("Llençat fil d'execució per gestionar el nou participant %s" % str(participants[nova_connexio]))
         except socket.timeout:
             # ha passat el temps màxim d'espera. Tornem a comprovar si encara cal continuar
@@ -241,7 +233,7 @@ def gestiona_peticions(ip, port, participants, finalitzacio):
         except OSError:
             logging.warning("Problemes amb la connexió del servidor. Es notifica a tots els usuaris")
             missatge = "Ha caigut el servidor de xat. No es podran acceptar nous participants"
-            broadcast(participants, missatge)
+            missatges.put((None, [], missatge))
             break
 
     # tanca el servidor
@@ -249,9 +241,47 @@ def gestiona_peticions(ip, port, participants, finalitzacio):
     logging.info("Finalitzada la gestió de peticions")
 
 
-def llenca_fil_gestio_de_peticions(ip, port, participants, finalitzacio):
+def envia_missatges(participants, missatges, finalitzacio):
+    """ Aquesta és la funció que envia els missatges als participants
+
+        Els missages venen a la cua de missatges en forma de tuples (destinatari, excepcions, missatge)
+
+        Quan el destinatari és None, ho envia a tots els participants excepte els que apareixen a la llista
+        d'excepcions
+
+        Quan el destinatari no es troba a la llista dels participants, ignora el missatge """
+    while not finalitzacio.isSet() and not missatges.empty():
+        try:
+            destinatari, excepcions, missatge = missatges.get(MAXIM_ESPERA_CONNEXIO)
+        except queue.Empty:
+            continue
+        if excepcions == None:  # cap excepcio
+            excepcions = []
+        if destinatari == None: # enviem a tothom
+            destinataris = participants.keys()
+        else:
+            destinataris = [destinatari]
+        destinataris = set(destinataris).intersection(set(participants)) - set(excepcions)
+        for destinatari in destinataris:
+            resultat = envia(destinatari, missatge)
+            if resultat != RESULTA_OK:
+                destinatari.close()
+                logging.info("Tancada la connexió del participant %s" % str(participants[destinatari]))
+
+
+def llenca_fil_gestio_de_peticions(ip, port, participants, missatges, finalitzacio):
     """ llença el fil d'execució que gestionarà les peticions de connexió dels participants del xat """
-    threading.Thread(target=gestiona_peticions, args=(ip, port, participants, finalitzacio, )).start()
+    threading.Thread(target=gestiona_peticions, args=(ip, port, participants, missatges, finalitzacio, )).start()
+
+
+def llenca_fil_enviament_de_missatges(participants, missatges, finalitzacio):
+    """ llença el fil d'execució que realitzarà l'enviament dels missatges als participants del xat """
+    threading.Thread(target=envia_missatges, args=(participants, missatges, finalitzacio, )).start()
+
+
+def llenca_fil_gestio_participant(connexio, adressa, participants, missatges, finalitzacio):
+    """ llença el fil d'execució que gestionarà els missatges que enviï un parcicipant """
+    threading.Thread(target=gestiona_participant, args=(nova_connexio, participants, missatges, finalitzacio, )).start()
 
 
 def processa_comandes(participants, finalitzacio):
@@ -286,14 +316,22 @@ logging.info("Obtingudes les dades de connexió. IP: %s. Port: %s" % (ip, port))
 finalitzacio = threading.Event()
 logging.info("Creat esdeveniment de finalització")
 
+# crea la cua de missatges
+missatges = queue.Queue()
+logging.info("Creada la cua de missages")
+
 # inicialitza la sala de xat
 # S'implementa en forma de diccionari. La clau és la connexió amb el
 # participant, i el valor és el nom del participant.
 participants = dict()
 logging.info("Inicialitzada la llista de participants")
 
+# arrenca l'enviament de missatges
+llenca_fil_enviament_de_missatges(participants, missatges, finalitzacio)
+logging.info("Llençat el fil d'enviament de missages")
+
 # arrenca el servei
-llenca_fil_gestio_de_peticions(ip, port, participants, finalitzacio)
+llenca_fil_gestio_de_peticions(ip, port, participants, missatges, finalitzacio)
 logging.info("Llençat el fil de gestió de peticions")
 
 # processa comandes de consola
