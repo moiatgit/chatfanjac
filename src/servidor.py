@@ -128,7 +128,7 @@ def broadcast(participants, missatge, excepte = []):
             continue
         resultat = envia(connexio, missatge)
         if resultat != RESULTA_ERROR:
-            logging.info("broadcast() desconnecta el participant %s" % str(connexio.getpeername()))
+            logging.info("broadcast() desconnecta el participant %s" % connexio.getpeername()[1])
             connexio.close()
 
 
@@ -150,7 +150,7 @@ def rep(connexio):
        logging.warning("timeout en intentar rebre %s" % connexio.getpeername()[1])
        return (RESULTA_TIMEOUT, None)
    except OSError:
-       logging.info("error en intentar rebre de %s" % connexio.getpeername()[1])
+       logging.info("error en intentar rebre de %s" % str(connexio))
        return (RESULTA_ERROR, None)
 
 
@@ -198,7 +198,7 @@ def gestiona_participant(connexio, adressa, participants, finalitzacio):
 
         if resultat == RESULTA_ERROR:
             logging.warning("Perduda la connexió amb el participant %s" % str(participants[connexio]))
-            missatge = "S'ha perdut la connexió %s" % connexio.getpeername()
+            missatge = "S'ha perdut la connexió %s" % participants[connexio][1]
             # envia notificació de finalització de participant
             broadcast(participants, missatge, [connexio])
             break

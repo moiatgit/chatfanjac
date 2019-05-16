@@ -73,6 +73,10 @@ logging.info("Participant2 enviat nom")
 
 # p2 rep benvinguda
 benvinguda = connexio2.recv(MIDA_MISSATGE).decode("utf8").strip()
+logging.info("Espera perquè l'arribada del participant 2 no es barregi amb el missatge de p1")
+time.sleep(1)
+logging.info("finalitzada l'espera")
+
 logging.info("Participant2 rebut missatge '%s'" % benvinguda)
 assert benvinguda == "Hola participant2. Acabes d'entrar a la sala de xat de Fanjac. De moment hi ha 2 participants"
 logging.info("Participant2 Rebuda benvinguda")
@@ -83,6 +87,11 @@ missatge = connexio1.recv(MIDA_MISSATGE).decode("utf8").strip()
 logging.info("Participant1 rebut missatge '%s'" % missatge)
 assert missatge == "S'ha afegit participant2. Ara ja sou 2 participants"
 logging.info("Participant1 rebut notificació nou participant")
+
+logging.info("Espera perquè l'arribada del participant 2 no es barregi amb el missatge de p1")
+time.sleep(1)
+logging.info("finalitzada l'espera")
+
 
 # p1 envia salutació
 logging.info("Participant1 envia salutació a participant2")
@@ -96,6 +105,10 @@ missatge = connexio2.recv(MIDA_MISSATGE).decode("utf8").strip()
 logging.info("Participant2 rebut missatge '%s'" % missatge)
 assert missatge == 'Hola participant2, què tal?'
 logging.info("Participant2 rep missatge de participant1")
+
+logging.info("Espera perquè el missatge de salutaciø de p1 no es barregi amb la seva finalitzaciø")
+time.sleep(1)
+logging.info("finalitzada l'espera")
 
 # p1 envia {quit}
 logging.info("Participant1 intenta enviar {quit}")
