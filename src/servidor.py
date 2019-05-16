@@ -281,7 +281,7 @@ def llenca_fil_enviament_de_missatges(participants, missatges, finalitzacio):
 
 def llenca_fil_gestio_participant(connexio, adressa, participants, missatges, finalitzacio):
     """ llença el fil d'execució que gestionarà els missatges que enviï un parcicipant """
-    threading.Thread(target=gestiona_participant, args=(nova_connexio, participants, missatges, finalitzacio, )).start()
+    threading.Thread(target=gestiona_participant, args=(connexio, participants, missatges, finalitzacio, )).start()
 
 
 def processa_comandes(participants, finalitzacio):
