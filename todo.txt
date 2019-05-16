@@ -1,13 +1,12 @@
 - NOW: reimplement server
 
     - current problem: 
+        En finalitzar el servidor continua algun thread viu
 
-      No passa cap test
-
-        He afegit el thread d'enviament i ara no passa cap test!
-
-      Sembla que broadcast() en ser executat per més d'un fil, entra en
-      conflicte quan ha d'enviar un missatge i la notificació de finalització
+- és possible que socket disponga de radress amb l'adreça
+  it is!  getpeername()
+  Remove any ussage of the address returned by accept since you can get it
+  whenever you need it
 
 - create a highly simplified version of the code with just the comments
   then another without the logging messages nor the error control
@@ -48,6 +47,9 @@
 
 Further exercises ideas:
 
+- el primer participant hauria de rebre un missatge dient quelcom similar a "de
+  moment estàs tu només"
+
 - yes wanna
 
 - server accepts commands to send a message to a concrete participant or even
@@ -58,5 +60,3 @@ Further exercises ideas:
 - no permetre noms duplicats dels participants
   - ex. rebatejar el participant amb el nom seguit d'un nr incremental.
 
-- el primer participant hauria de rebre un missatge dient quelcom similar a "de
-  moment estàs tu només"
