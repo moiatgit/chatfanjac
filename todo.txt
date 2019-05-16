@@ -1,12 +1,10 @@
-- NOW: reimplement server
-
-    - current problem: 
-        En finalitzar el servidor continua algun thread viu
 
 - és possible que socket disponga de radress amb l'adreça
   it is!  getpeername()
   Remove any ussage of the address returned by accept since you can get it
   whenever you need it
+
+- és possible que no calgui el thread d'enviament de missatges
 
 - create a highly simplified version of the code with just the comments
   then another without the logging messages nor the error control

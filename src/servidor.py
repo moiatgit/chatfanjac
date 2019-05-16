@@ -59,6 +59,7 @@ import socket
 import threading
 import logging
 import queue
+import time
 
 # Mida màxima dels missatges a intercanviar entre el client i el servidor
 MIDA_MISSATGE = 1024
@@ -107,6 +108,7 @@ def arrenca_servidor(ip, port, finalitzacio):
         return connexio
     except OSError as e:
         print("ERROR: no es pot arrencar el servidor. (erno %s): %s" % (e.errno, e.strerror))
+        logging.info("Marcant l'esdeveniment de finalització per impossibilitat de crear la connexió")
         finalitzacio.set()
 
 
@@ -239,9 +241,10 @@ def gestiona_peticions(ip, port, participants, missatges, finalitzacio):
             # ha passat el temps màxim d'espera. Tornem a comprovar si encara cal continuar
             pass
         except OSError:
-            logging.warning("Problemes amb la connexió del servidor. Es notifica a tots els usuaris")
             missatge = "Ha caigut el servidor de xat. No es podran acceptar nous participants"
+            logging.warning("Perduda connexió del servidor. Notificant participants")
             missatges.put((None, [], missatge))
+            print(missatge)
             break
 
     # tanca el servidor
@@ -259,9 +262,10 @@ def envia_missatges(participants, missatges, finalitzacio):
         d'excepcions
 
         Quan el destinatari no es troba a la llista dels participants, ignora el missatge """
-    logging.debug("envia_missatges() arrencant")
     while not finalitzacio.isSet() or not missatges.empty():
-        logging.debug("envia_missatges() nova iteració: qsize %s" % missatges.qsize())
+        if missatges.empty():
+            time.sleep(1)
+            continue
         try:
             destinatari, excepcions, missatge = missatges.get(MAXIM_ESPERA_CONNEXIO)
             logging.debug("envia_missatges() retornat de missatges.get()")

@@ -20,7 +20,7 @@
       - mostra els missatges que va rebent
       - tanca la connexió en rebre l'esdeveniment de finalització
 
-    
+
     Script for Tkinter GUI chat client."""
 import socket
 import sys
@@ -43,7 +43,7 @@ RESULTA_TIMEOUT = 2     # operació no realitzada: s'ha superat el temps
 
 
 def obte_ip_port_i_nom(argv):
-    """ 
+    """
         obté la ip i el port del servidor, i el nom que tindrà el participant
         dins de la sala de xat.
 
@@ -171,7 +171,7 @@ def processa_comandes(connexio, finalitzacio):
 
 # configura el logging
 logging.basicConfig(filename="%s.log" % sys.argv[0],
-        level=logging.INFO, 
+        level=logging.INFO,
         format="%(asctime)s %(levelname)s: %(message)s")
 logging.info("Arrenca l'aplicació de client")
 
