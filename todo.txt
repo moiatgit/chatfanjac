@@ -1,8 +1,4 @@
 
-NOW: line 150 servidor.py
-    trying to see why p2 (test03) is not receiving the salutation
-
-
 - és possible que socket disponga de radress amb l'adreça
   it is!  getpeername()
   Remove any ussage of the address returned by accept since you can get it
