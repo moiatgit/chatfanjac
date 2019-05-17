@@ -9,6 +9,7 @@ It implements a chat room with a server able to accept multiple connexions.
 Participants have a name and can receive and send messages in arbitrary order.
 
 
+
 To make it work
 ===============
 
@@ -58,3 +59,11 @@ Inspired by the following sources:
 - https://www.geeksforgeeks.org/simple-chat-room-using-python/
 
 - https://medium.com/swlh/lets-write-a-chat-app-in-python-f6783a9ac170
+
+
+License
+=======
+
+You can do whatever you want with the contents of this project under the terms
+of the GNU General Public License as published by the Free Software Foundation,
+either version 3 of the License, or any later version (your choice)
