@@ -50,55 +50,13 @@ Further exercises ideas:
 - no permetre noms duplicats dels participants
   - ex. rebatejar el participant amb el nom seguit d'un nr incremental.
 
-Antiga descripció del servidor
-    La implementació consisteix en quatre tipus de fils d'execució:
+- gestionar una tortuga remota: client que quan rep un missatge que conté
+  'tortuga', executa la comanda que segueix. Les comandes poden ser, per
+  començar:
+  - pas
+  - dreta
+  - esquerra
 
-    - el fil principal
-      - obté les dades de configuració del servei (ip i port)
-      - llença el fil d'enviament de missatges
-      - llença el fil de gestió de peticions
-      - rep i processa comandes de consola
-      - crea la qua de missatges que permet comunicar els altres fils amb el fil d'enviament de missatges
-      - crea i marca l'esdeveniment (threading.Event) de finalització per que la resta de fils
-        finalitzin la seva execució
+- ampliació de la gestió de tortuga
 
-    - el fil de gestió de peticions (executa la funció gestiona_peticions())
-      - crea el socket de servidor
-      - en cas que hi hagi problemes per crear el socket, marca l'esdeveniment de finalització
-      - escolta el socket de servidor per noves peticions de clients per afegir-se al xat
-      - en cas que hi hagi problemes per escoltar del socket, marca l'esdeveniment de finalització
-      - llença un nou fil de gestió de participant per cada nou client
-      - finalitza quan l'esdeveniment de finalització és marcat
-      - tanca el socket de servidor
-
-    - el fil de gestió de participant (executa la funció gestiona_participant())
-      - escolta el socket d'un participant per obtenir el nom
-      - en cas que tingui problemes per rebre el nom del participant. finalitza execució del fil
-      - informa al nou participant que ha estat admés al xat
-      - presenta el nou participant a la resta de participants actius del xat
-      - afegeix el nou participant (amb el seu socket i nom) a la llista de participants actius al xat
-      - escolta el socket del participant per nous missatges del participant
-      - per cada missatge del participant, reenvia el missatge a la resta
-      - quan rep el missatge de finalització per part del participant,
-        - elimina el participant de la llista de participants actius
-        - notifica la resta de participants que aquest ha abandonat el xat
-        - tanca la connexio del participant
-        - finalitza l'execució del fil
-      - quan l'esdeveniment de finalització és marcat,
-        - notifica el participant que el xat es tanca
-        - tanca la connexio del participant
-        - finalitza l'execució del fil
-      - si en algun moment perd la connexió amb el participant,
-        - notifica la resta de participants que aquest ha perdut la connexió
-        - tanca la connexio del participant
-        - finalitza l'execució del fil
-      - en finalitzar l'execució del fil, tanca el socket
-
-    - el fil d'enviament de missatges (executa la funcio envia_missatges())
-      - processa la cua de missatges: és l'únic fil que en treu elements
-      - finalitza quan la marca de finalització ha estat establerta i la cua de missatges buida
-      - els elements de la cua de missatges inclouen la informació del destinatari i el missatge
-      - envia missatges només als participants que encara hi són actius
-      - si un enviament falla considera perduda la connexió amb el participant i tanca la connexió.
-        El tancament de la connexió provocarà la finalització del fil de gestió del participant.
-
+  Fa el mateix però amb una tortuga per cada participant (amb un color diferent)
