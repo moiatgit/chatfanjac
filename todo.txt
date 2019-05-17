@@ -1,5 +1,3 @@
-NOW: check client
-
 - create a highly simplified version of the code with just the comments
   then another without the logging messages nor the error control
   then another without the logging messages

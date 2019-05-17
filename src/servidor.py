@@ -199,6 +199,12 @@ def gestiona_participant(connexio, participants, missatges, finalitzacio):
         if not es_actiu:    # el participant ha estat marcat com a innactiu
             break
 
+        if finalitzacio.isSet():    # es tanca la sala de xat
+            logging.info("Notificant la finalització al participant %s:%s" % adressa)
+            missatge = "{quit}"
+            missatges.put((connexio, missatge))
+            break
+
         # recepció d'un nou missatge
         resultat, missatge = rep(connexio)
         if resultat == RESULTA_TIMEOUT: # temps exhaurit. Tornem-hi
@@ -220,15 +226,11 @@ def gestiona_participant(connexio, participants, missatges, finalitzacio):
             broadcast(participants, missatges, [connexio], missatge)
             break
 
-        if finalitzacio.isSet():    # es tanca la sala de xat
-            missatge = "{quit}"
-            missatges.put((connexio, missatge))
-            break
-
         # reenvia el missatge a la resta de participants
-        reenviament = "%s: %s" % (nom, missatge)
-        broadcast(participants, missatges, [connexio], missatge)
+        reenviament = "[%s] %s" % (nom, missatge)
+        broadcast(participants, missatges, [connexio], reenviament)
 
+    time.sleep(1)   # deixem un temps perquè es pugui enviar els darrers missatges
     try:
         connexio.close()
     except OSError:
@@ -269,6 +271,7 @@ def broadcast(participants, missatges, excepcions, missatge):
             continue
         missatges.put((participant, missatge))
 
+
 def processa_comandes(participants, finalitzacio):
     """ processa les comandes que es reben de consola. """
     logging.info("Inici de processament de comandes")
@@ -280,9 +283,18 @@ def processa_comandes(participants, finalitzacio):
             print("Les comandes disponibles són:")
             print("\tajuda: mostra aquesta ajuda")
             print("\tquants: mostra quants participants estan actius")
+            print("\tqui: mostra la llista de participants")
             print("\tfinalitza: finalitza el xat")
         elif 'quants'.startswith(comanda):
             print("El nombre de participants en aquest moment és %s" % len(participants))
+        elif 'qui'.startswith(comanda):
+            if len(participants) == 0:
+                print("No hi ha cap participant en aquests moments")
+            else:
+                print("Els participants actuals són")
+                for participant in participants:
+                    nom, estat = participants.get(participant, ('', False))
+                    print("\t%s (actiu: %s)" % (nom, estat))
         elif 'finalitza'.startswith(comanda):
             logging.info("Marcant l'esdeveniment de finalització per petició de la usuària")
             finalitzacio.set()
