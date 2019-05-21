@@ -56,9 +56,13 @@ Algunes idees per treballar amb el xat de Fanjac
   missatge que conté 'tortuga', executa la comanda que segueix. Les comandes
   poden ser, per començar:
 
-  - pas
+  - endavant
   - dreta
   - esquerra
+  - inicia
+
+  Nota: el programa ``clienttortuga.py`` ja fa això. Una manera d'ampliar-lo
+  seria afegir comandes per canviar els colors de la tortuga
 
 * Tortuga multiusuari
 

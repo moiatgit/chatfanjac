@@ -9,12 +9,13 @@ It implements a chat room with a server able to accept multiple connexions.
 Participants have a name and can receive and send messages in arbitrary order.
 
 
-
 To make it work
 ===============
 
 This chat requires the execution of two programs ``server.py`` and
 ``client.py``.
+
+You'll find them at folder ``src/``
 
 The server must be launched before any client.
 
