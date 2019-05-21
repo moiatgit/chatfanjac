@@ -1,7 +1,7 @@
-#!/ur/bin/env python3
+#! /usr/bin/env python3
+
 """
     Implementació d'un servidor de xat
-
 """
 
 import sys
@@ -235,13 +235,14 @@ def gestiona_participant(connexio, participants, missatges, finalitzacio):
         connexio.close()
     except OSError:
         pass
+    participants.pop(connexio, None)
     logging.info("Finalitzada l'execució del participant %s:%s" % adressa)
 
 
 def envia(connexio, missatge):
     """ Tracta d'enviar el missatge al participant."""
     try:
-        connexio.send(bytes(missatge, "utf8"))
+        connexio.sendall(bytes(missatge, "utf8"))
         return RESULTA_OK
     except socket.timeout:
         return RESULTA_TIMEOUT

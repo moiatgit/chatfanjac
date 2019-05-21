@@ -94,7 +94,7 @@ logging.info("Participant1 ha enviat salutació a participant2")
 logging.info("Participant2 intenta rebre salutació")
 missatge = connexio2.recv(MIDA_MISSATGE).decode("utf8").strip()
 logging.info("Participant2 rebut missatge '%s'" % missatge)
-assert missatge == 'Hola participant2, què tal?'
+assert missatge == '[participant1] Hola participant2, què tal?'
 logging.info("Participant2 rep missatge de participant1")
 
 # p1 envia {quit}

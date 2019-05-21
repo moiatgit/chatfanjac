@@ -1,27 +1,9 @@
-#!/usr/bin/env python3
+#! /usr/bin/env python3
+
 """
     Implementació d'un client de xat
+"""
 
-    La implementació consisteix en dos tipus de fils d'execució:
-
-    - el fil principal
-      - obté les dades de configuració de la connexió (host, port i nom del participant)
-      - realitza la connexió amb el servidor
-      - envia el nom del participant
-      - llença el fil de gestió dels missatges rebuts del servidor
-      - rep i processa comandes de consola
-      - crea i marca l'esdeveniment (threading.Event) de finalització per què
-        la resta de fils finalitzin la seva execució
-
-    - el fil de gestió de la connexió (executa la funció gestiona_connexio())
-      - escolta el socket de connexió amb el servidor
-      - en cas que tingui problemes per escoltar el socket, marca l'esdeveniment de finalització
-      - en cas qeu rebi el missatge '{quit}', marca l'esdeveniment de finalització
-      - mostra els missatges que va rebent
-      - tanca la connexió en rebre l'esdeveniment de finalització
-
-
-    Script for Tkinter GUI chat client."""
 import socket
 import sys
 import threading
@@ -118,7 +100,7 @@ def gestiona_connexio(connexio, finalitzacio):
 def envia(connexio, missatge):
     """ Tracta d'enviar el missatge al participant."""
     try:
-        connexio.send(bytes(missatge, "utf8"))
+        connexio.sendall(bytes(missatge, "utf8"))
         return RESULTA_OK
     except socket.timeout:
         return RESULTA_TIMEOUT
